@@ -2,6 +2,7 @@ package com.matheusrodrigues.authentication_api.service;
 
 import com.matheusrodrigues.authentication_api.Exceptions.*;
 import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.matheusrodrigues.authentication_api.dto.LoginReturn;
@@ -10,6 +11,10 @@ import com.matheusrodrigues.authentication_api.models.Role;
 import com.matheusrodrigues.authentication_api.models.User;
 import com.matheusrodrigues.authentication_api.repository.RoleRepository;
 import com.matheusrodrigues.authentication_api.repository.UserRepository;
+
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @Service
@@ -27,21 +32,8 @@ public class UserService {
     @Autowired
     private BCryptPasswordEncoder bcrypt;
 
-    private void userAuthentication(String token) {
-        User user = jwt.getUserFromToken(token, repository);
-        if (!user.getRole().getName().equals(RoleName.ROLE_ADMIN)
-                && !user.getRole().getName().equals(RoleName.ROLE_MANAGER)) {
-            throw new UnauthorizedException();
-        }
-
-    }
-
-    private void roleAuthentication(Role role) {
-        if (!role.getName().equals(RoleName.ROLE_ADMIN) && !role.getName().equals(RoleName.ROLE_MANAGER)
-                && !role.getName().equals(RoleName.ROLE_USER)) {
-            throw new BadRequestException();
-        }
-    }
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     public User saveUser(User user) {
         boolean existByEmail = repository.existsByEmail(user.getEmail());
@@ -62,61 +54,36 @@ public class UserService {
         }
     }
 
-    public LoginReturn loginByEmail(String email, String password) {
+    public LoginReturn login(String login, String password) {
 
-        User user = repository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException());
+        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(login, password);
 
-        boolean passowrdTrue = bcrypt.matches(password, user.getPassword());
+        Authentication authentication = authenticationManager.authenticate(authToken);
 
-        if (!passowrdTrue) {
-            throw new BadRequestException();
-        } else {
-            String token = jwt.generateToken(user);
-            return new LoginReturn(user, token);
-        }
-    }
+        User user = (User) authentication.getPrincipal();
 
-    public LoginReturn loginByUsername(String username, String password) {
-        User user = repository.findByUsername(username)
-                .orElseThrow(() -> new BadRequestException());
+        String tokenJwt = jwt.generateToken(user);
 
-        boolean passowrdTrue = bcrypt.matches(password, user.getPassword());
+        return new LoginReturn(user, tokenJwt);
 
-        if (!passowrdTrue) {
-            throw new BadRequestException();
-        } else {
-            String token = jwt.generateToken(user);
-            return new LoginReturn(user, token);
-        }
     }
 
     // métodos protegidos por jwt
 
-    public List<User> getAllUsers(String token) {
-
-        userAuthentication(token);
+    public List<User> getAllUsers() {
         return repository.findAll();
-
     }
 
-    public User setRoleUser(String token, Role roleSet) {
-        User user = jwt.getUserFromToken(token, repository);
+    public User setRoleUser(Integer id, Role roleSet) {
 
-        RoleName role = user.getRole().getName();
-        if (role.equals(RoleName.ROLE_MANAGER)) {
-            user.setRole(roleSet);
-            return repository.save(user);
+        User userSet = repository.findById(id).orElseThrow(() -> new UserNotFoundException());
 
-        } else {
-            throw new UnauthorizedException();
-        }
+        userSet.setRole(roleSet);
+        return repository.save(userSet);
 
     }
 
     public User updateUser(String token, Integer id, User updateUSer) {
-
-        userAuthentication(token);
 
         User user = repository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException());
@@ -150,16 +117,12 @@ public class UserService {
 
     public User getUserById(Integer idUser, String token) {
 
-        userAuthentication(token);
-
         return repository.findById(idUser)
                 .orElseThrow(() -> new UserNotFoundException());
     }
 
     public User deleteUser(Integer idUser, String token) {
         User user = jwt.getUserFromToken(token, repository);
-
-        userAuthentication(token);
 
         if (user.getId().equals(idUser)) {
             throw new BadRequestException();
@@ -174,13 +137,10 @@ public class UserService {
     }
 
     public List<User> getUsersByRole(Role role) {
-        roleAuthentication(role);
-
         return repository.getUserByRole(role);
     }
 
     public Integer countUsersByRole(Role role) {
-        roleAuthentication(role);
         return repository.countByRole(role);
     }
 

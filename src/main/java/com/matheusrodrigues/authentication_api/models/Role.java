@@ -2,6 +2,8 @@ package com.matheusrodrigues.authentication_api.models;
 
 import java.util.List;
 
+import org.springframework.security.core.GrantedAuthority;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.matheusrodrigues.authentication_api.enums.RoleName;
 import jakarta.persistence.Column;
@@ -21,7 +23,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "roles")
-public class Role {
+public class Role implements GrantedAuthority {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,4 +38,8 @@ public class Role {
     @JsonIgnore
     private List<User> users;
 
+    @Override
+    public String getAuthority() {
+        return name.name();
+    }
 }

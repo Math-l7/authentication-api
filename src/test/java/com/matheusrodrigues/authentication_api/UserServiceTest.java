@@ -74,35 +74,19 @@ public class UserServiceTest {
     }
 
     @Test
-    @DisplayName("should login in account by email with sucess")
+    @DisplayName("should login in account with sucess")
     public void loginByEmailTest() {
 
         User user = new User("Matheus", "matheusluizroza@gmail.com", "140208");
 
         when(repository.findByEmail("matheusluizroza@gmail.com")).thenReturn(Optional.of(user));
 
-        LoginReturn userTest = service.loginByEmail("matheusluizroza@gmail.com", "140208");
+        LoginReturn userTest = service.login("matheusluizroza@gmail.com", "140208");
 
         assertNotNull(userTest);
         assertEquals(user.getEmail(), userTest.getUser().getEmail());
 
         verify(repository).findByEmail("matheusluizroza@gmail.com");
-
-    }
-
-    @Test
-    @DisplayName("should login by username with sucess")
-    public void loginByUsernameTest() {
-
-        User user = new User("Matheus", "matheusluizroza@gmail.com", "140208");
-
-        when(repository.findByUsername("Matheus")).thenReturn(Optional.of(user));
-
-        LoginReturn userTest = service.loginByUsername("Matheus", "140208");
-
-        assertNotNull(userTest);
-        assertEquals(user.getUsername(), userTest.getUser().getUsername());
-        verify(repository).findByUsername("Matheus");
 
     }
 
@@ -118,9 +102,7 @@ public class UserServiceTest {
 
         when(repository.findAll()).thenReturn(listUsers);
 
-        when(jwt.getUserFromToken("abcd", repository)).thenReturn(admin);
-
-        List<User> listUsersTest = service.getAllUsers("abcd");
+        List<User> listUsersTest = service.getAllUsers();
 
         assertNotNull(listUsersTest);
         assertEquals(listUsers, listUsersTest);
@@ -128,19 +110,27 @@ public class UserServiceTest {
     }
 
     @Test
-    @DisplayName("should set user's role with sucess")
+    @DisplayName("should set user's role with success")
     public void setRoleUserTest() {
 
         when(jwt.getUserFromToken("abcd", repository)).thenReturn(admin);
 
         Role newRole = new Role();
         newRole.setName(RoleName.ROLE_MANAGER);
-        admin = service.setRoleUser("abcd", newRole);
 
-        assertNotNull(admin);
-        assertEquals(admin.getRole().getName(), newRole.getName());
-        verify(repository).save(admin);
+        User userToChange = new User("Matheus", "matheus@gmail.com", "123456");
+        userToChange.setId(1);
+        userToChange.setRole(roleAdmin);
 
+        when(repository.findById(userToChange.getId())).thenReturn(Optional.of(userToChange));
+        when(repository.save(userToChange)).thenReturn(userToChange);
+
+        User updatedUser = service.setRoleUser(userToChange.getId(), newRole);
+
+        assertNotNull(updatedUser);
+        assertEquals(newRole.getName(), updatedUser.getRole().getName());
+
+        verify(repository).save(userToChange);
     }
 
     @Test

@@ -11,6 +11,7 @@ import com.matheusrodrigues.authentication_api.models.User;
 import com.matheusrodrigues.authentication_api.service.UserService;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -32,43 +33,48 @@ public class UserController {
     @Autowired
     private UserService service;
 
+    // metodo geral
     @PostMapping("/save-users")
     public ResponseEntity<User> saveUser(@RequestBody User user) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.saveUser(user));
 
     }
 
-    @PostMapping("/login-email")
-    public ResponseEntity<LoginReturn> loginByEmail(@RequestBody LoginRequest user) {
-        return ResponseEntity.ok(service.loginByEmail(user.getEmail(), user.getPassword()));
+    // metodo geral
+    @PostMapping("/login")
+    public ResponseEntity<LoginReturn> login(@RequestBody LoginRequest user) {
+        return ResponseEntity.ok(service.login(user.getUsername(), user.getPassword()));
     }
 
-    @PostMapping("/login-username")
-    public ResponseEntity<LoginReturn> loginByUsername(@RequestBody LoginRequest user) {
-        return ResponseEntity.ok(service.loginByUsername(user.getUsername(), user.getPassword()));
-    }
-
+    // manager e admin
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
     @GetMapping("/user/{id}")
     public ResponseEntity<User> getUserById(@PathVariable Integer id, @RequestHeader("Authorization") String token) {
         return ResponseEntity.ok(service.getUserById(id, token));
     }
 
+    // metodo geral
     @GetMapping("/users-role")
     public ResponseEntity<List<User>> getUserByRole(@RequestParam Role role) {
         return ResponseEntity.ok(service.getUsersByRole(role));
     }
 
+    // metodo geral
     @GetMapping("/count-users-role")
     public ResponseEntity<Integer> countUsersByRole(@RequestParam Role role) {
         return ResponseEntity.ok(service.countUsersByRole(role));
     }
 
-    @PutMapping("/set-role-user")
-    public ResponseEntity<User> setRoleUser(@RequestHeader("Authorization") String token, @RequestBody Role role) {
+    // metodo Manager
+    @PreAuthorize("hasRole('ROLE_MANAGER')")
+    @PutMapping("/set-role-user/{id}")
+    public ResponseEntity<User> setRoleUser(@PathVariable Integer id, @RequestBody Role role) {
 
-        return ResponseEntity.ok(service.setRoleUser(token, role));
+        return ResponseEntity.ok(service.setRoleUser(id, role));
     }
 
+    // metodo manager e admin
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
     @PutMapping("/set-user/{id}")
     public ResponseEntity<User> updateUser(@RequestHeader("Authorization") String token, @PathVariable Integer id,
             @RequestBody User userSet) {
@@ -76,6 +82,7 @@ public class UserController {
         return ResponseEntity.ok(service.updateUser(token, id, userSet));
     }
 
+    // metodo geral
     @PutMapping("/change-password")
     public ResponseEntity<Void> changePassword(@RequestHeader("Authorization") String token,
             @RequestBody ChangePassword obj) {
@@ -83,6 +90,8 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    // metodo manager e admin
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN' , 'ROLE_MANAGER')")
     @DeleteMapping("/delete-user/{id}")
     public ResponseEntity<User> deleteUser(@PathVariable Integer idUser, @RequestHeader("Authorization") String token) {
         return ResponseEntity.ok(service.deleteUser(idUser, token));

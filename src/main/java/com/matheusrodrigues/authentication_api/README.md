@@ -1,6 +1,6 @@
 # Authentication REST API (Spring Boot + JWT)
 
-> API de autenticação desenvolvida em Java com Spring Boot, utilizando JWT para segurança e PostgreSQL como banco de dados. Inclui documentação automática via Swagger.
+> API RESTful de autenticação desenvolvida em Java com Spring Boot, utilizando JWT para segurança e PostgreSQL como banco de dados. Inclui documentação automática via Swagger.
 
 ---
 
